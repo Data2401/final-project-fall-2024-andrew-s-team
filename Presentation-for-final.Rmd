@@ -1,0 +1,348 @@
+---
+title: "Analysis of US Accidents Data"
+author: "Andrew J. Martinez"
+date: "2024-11-19"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Introduction
+
+In this analysis, we will explore the US Accidents Dataset available on Kaggle. This dataset contains information about traffic accidents across the United States, including various features such as accident locations, severity, weather conditions, and more. By analyzing this data, we aim to uncover trends and relationships between different factors that contribute to the frequency and severity of traffic accidents in the US, more specifically, in cities within the US.
+
+## Key Details In This Dataset
+
+The US Accidents Dataset contains detailed records of traffic accidents across the US. Key attributes include:
+
+- Start_Time:  The date and time the accident occurred.
+- City:  City where the accident took place.
+- Weather_Condition:  Weather conditions at the time of the accident.
+- Road_Condition:  Condition of the road (e.g., dry, wet, icy).
+- Severity:  A numerical scale (1 to 4) indicating the severity of the accident (from minor to fatal).
+- Accident Type:  Rear-end collisions, rollovers, etc.
+
+# Problem/Questions and Approach
+
+The problem we aim to address is understanding the factors that influence the occurrence and severity of traffic accidents in U.S. cities. Specifically, we will examine:
+
+1.Which cities have the highest number of accidents?
+
+2.How do different weather conditions affect accident frequency?
+
+3a.What is the accident severity by weather condition (Top 10)?
+
+3b.What is the accident Severity by City (Top 10).
+
+4.What is the number of accidents during each time of the day?
+
+To address these questions, we will perform exploratory data analysis (EDA) using the US Accidents Dataset. 
+The analysis will include:
+
+- Cleaning and preparing the data for analysis, ensuring that missing values and irrelevant information are handled appropriately.
+- Visualizing the relationships between accident frequency, severity, weather conditions, and time of day using bar charts and stacked bar charts.
+- Grouping and summarizing the data to identify trends and draw conclusions.
+
+# Libraries Used
+I used the following R libraries for data manipulation, exploration, and visualization:
+
+- library(tidyverse) for data manipulation and visualization
+- library(ggplot2) for data visualization
+- library(dplyr) for data wrangling (manipulation and transformation)
+- library(lubridate) for working with dates and times
+- library(scales) for better scale formatting in plots
+- library(knitr) for dynamic report generation
+
+```{r}
+# Loading necessary libraries
+library(tidyverse)   # for data manipulation and visualization
+library(ggplot2)     # for data visualization
+library(dplyr)       # for data wrangling
+library(lubridate)   # for working with dates and times
+library(scales)      # for better scale formatting in plots
+library(knitr)       # for dynamic report generation
+```
+This "conflict" message is telling us two things:
+
+- The tidyverse packages are being loaded: It shows the core packages in the tidyverse that have been successfully loaded, such as dplyr, ggplot2, tibble, lubridate, and others. These are essential tools for data manipulation and visualization in R.
+
+- Package conflicts: R is informing you that some functions from the tidyverse packages (like dplyr) are masking or overriding functions from other base or loaded packages. This is a common situation when you have functions with the same name in different packages.
+
+This produces no problem within the code, therefor this is not something that needs to be fixed.  However for other codes that may run into errors with future data exploration, it is important to note this overriding, so we can refer back to these libraries and fix the problem to run these codes.
+
+# Loading the Data
+
+### Data Source:
+The dataset used for this analysis is the US Accidents Dataset, which can be accessed from Kaggle through this link [Kaggle US Accidents Dataset](https://www.kaggle.com/datasets/sasikumarg/us-accidents). The dataset was collected from various traffic-related data sources across the United States, aiming to provide insights into traffic accidents, including their locations, causes, and other contributing factors. The data was gathered by Sasikumarg, and it is made publicly available for use in data analysis and research.
+
+The dataset covers traffic accidents that occurred between 2016 and 2021. It includes over 3 million accident records, containing various features such as the type of accident, severity, location, weather conditions, and time of occurrence. It is important to note that this dataset may contain missing values for some columns, particularly for specific weather conditions, or accidents where certain data points, like location or specific time of occurrence, were not available.
+
+```{r}
+accidents_data <- read.csv("US_Accidents.csv")
+
+glimpse(accidents_data)
+colnames(accidents_data)
+```
+
+# Data Exploration and Cleaning
+To ensure accurate analysis, we must clean the dataset:
+
+This dataset was cleaned by handling missing values, converting data types, and filtering out irrelevant columns. For this analysis, the main focus was:
+
+- Removing rows with missing critical data (e.g., Start_Time, City, Weather_Condition).
+- Ensuring that the Start_Time column is in a proper date-time format.
+
+
+### Code:
+
+- Cleaning data to ensure no missing values in key columns (Severity, Weather_Condition, City)
+- Grouping data to ease the process of code for questions containing factors like weather and severity
+
+##### Remove rows with NA in important columns (Start_Time, city, weather_condition):
+
+accidents_data_clean <- accidents_data %>%
+  filter(!is.na(Start_Time) & !is.na(City) & !is.na(Weather_Condition))
+
+##### Limit to top 10 weather conditions to ensure a better visual understanding of the graphs:
+
+top_weather_conditions <- accidents_by_weather %>%
+  group_by(Weather_Condition) %>%
+  summarise(Accident_Count = sum(Accident_Count)) %>%
+  arrange(desc(Accident_Count)) %>%
+  head(10)
+
+##### Filter to only include top 10 weather conditions:
+
+accidents_by_weather_top <- accidents_by_weather %>%
+  filter(Weather_Condition %in% top_weather_conditions$Weather_Condition)
+
+##### Reorder Severity factor to ensure correct ordering (from 1 to 4):
+
+accidents_by_weather_topSeverity <- factor(accidents_by_weather_top$Severity, levels = c(1, 2, 3, 4))
+
+##### Group accidents by weather condition and severity:
+
+accidents_by_weather <- accidents_data_clean %>%
+  group_by(Weather_Condition, Severity) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+```{r results='hide'}
+# Remove rows with NA in important columns (Start_Time, city, weather_condition)
+accidents_data_clean <- accidents_data %>%
+  filter(!is.na(Start_Time) & !is.na(City) & !is.na(Weather_Condition))
+
+# Cleaning data to ensure no missing values in key columns (Severity, Weather_Condition, City)
+# For questions containing factors like weather and severity
+
+# Summarize accidents by weather condition and severity
+accidents_by_weather <- accidents_data_clean %>%
+  group_by(Weather_Condition, Severity) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+# Limit to top 10 weather conditions
+top_weather_conditions <- accidents_by_weather %>%
+  group_by(Weather_Condition) %>%
+  summarise(Accident_Count = sum(Accident_Count)) %>%
+  arrange(desc(Accident_Count)) %>%
+  head(10)
+
+# Filter to only include top 10 weather conditions
+accidents_by_weather_top <- accidents_by_weather %>%
+  filter(Weather_Condition %in% top_weather_conditions$Weather_Condition)
+
+# Reorder Severity factor to ensure correct ordering (from 1 to 4)
+accidents_by_weather_top$Severity <- factor(accidents_by_weather_top$Severity, levels = c(1, 2, 3, 4))
+
+```
+
+# Filtering My Data Continued...
+
+##### Filter out rows where weather_condition is NA or empty before grouping for Question 2
+accidents_by_weather <- accidents_data_clean %>%
+  filter(!is.na(Weather_Condition) & Weather_Condition != "") %>%
+  group_by(Weather_Condition) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+##### Ensure the time columns are in the correct format and extract the start hour for Question 4
+accidents_data_time <- accidents_data_clean %>% 
+  mutate(
+    Start_Time2 = dmy_hm(Start_Time),    # Convert Start_Time to date-time
+    End_Time = dmy_hm(End_Time),        # Convert End_Time to date-time
+    Start_Hour = hour(Start_Time2)       # Extract hour from Start_Time
+  )
+
+accidents_data_time %>% filter(is.na(Start_Time2)) %>% select(Start_Time) %>% slice_sample(n = 20)
+
+##### Filter out rows where weather_condition is NA or empty before grouping for Question 2
+accidents_by_weather <- accidents_data_clean %>%
+  filter(!is.na(Weather_Condition) & Weather_Condition != "") %>%
+  group_by(Weather_Condition) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+##### Ensure the time columns are in the correct format and extract the start hour for Question 4
+accidents_data_time <- accidents_data_clean %>% 
+  mutate(
+    Start_Time2 = dmy_hm(Start_Time),    # Convert Start_Time to date-time
+    End_Time = dmy_hm(End_Time),        # Convert End_Time to date-time
+    Start_Hour = hour(Start_Time2)       # Extract hour from Start_Time
+  )
+
+##### accidents error for code above, says there are 34000 missing but it is only 3% of our data.
+accidents_data_time %>% filter(is.na(Start_Time2)) %>% select(Start_Time) %>% slice_sample(n = 20)
+
+```{r}
+# Filter out rows where weather_condition is NA or empty before grouping
+# For Question 2
+accidents_by_weather <- accidents_data_clean %>%
+  filter(!is.na(Weather_Condition) & Weather_Condition != "") %>%
+  group_by(Weather_Condition) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+# Ensure the time columns are in the correct format and extract the start hour
+# For Question 4
+accidents_data_time <- accidents_data_clean %>% 
+  mutate(
+    Start_Time2 = dmy_hm(Start_Time),    # Convert Start_Time to date-time
+    End_Time = dmy_hm(End_Time),        # Convert End_Time to date-time
+    Start_Hour = hour(Start_Time2)       # Extract hour from Start_Time
+  )
+
+accidents_data_time %>% filter(is.na(Start_Time2)) %>% select(Start_Time) %>% slice_sample(n = 20)
+```
+##### Accidents Error Shown Above
+The accidents error for code above says there are 34000 pieces of data missing in start_time.  This may seem like a lot of data however we choose to ignore this due to the factors that weigh into this missing dataset.  Not only is this 34000 only 3% of our data, but it is also 3% of times where accident reporters have forgot to place in a time stamp during an accident.  Whether it was forgetting to place a time stamp in the data or overall just an error in the dataset itself this can be avoided since it will not play a weighing factor in our understanding of the data as a whole.
+
+# Question 1. Most Accident-Prone Cities
+
+To explore which Cities have the highest number of accidents, we will group the data by city and visualize the total number of accidents.
+
+```{r}
+# Group by city and count the number of accidents
+accidents_by_city <- accidents_data_clean %>%
+  group_by(City) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+# Select the top 10 cities with the highest number of accidents
+top_cities <- head(accidents_by_city, 10)
+
+# Plot the top 10 most accident-prone cities
+ggplot(top_cities, aes(x = reorder(City, Accident_Count), y = Accident_Count)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  coord_flip() +  # Flip axes for readability
+  labs(title = "Top 10 Most Accident-Prone Cities", x = "City", y = "Number of Accidents") +
+  theme_minimal()
+options(scipen = 999) 
+```
+
+# Question 2. Weather Conditions and Accidents
+
+Next, we examine how different weather conditions affect accident frequency by grouping the data by Weather_Condition and summarizing the accident counts.
+
+```{r}
+# Select the top 10 weather conditions
+top_weather <- head(accidents_by_weather, 10)
+
+# Plot accident frequency by weather condition
+ggplot(top_weather, aes(x = reorder(Weather_Condition, Accident_Count), y = Accident_Count)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  coord_flip() +
+  labs(title = "Top 10 Weather Conditions for Accidents", x = "Weather Condition", y = "Number of Accidents") +
+  theme_minimal()
+options(scipen = 999)
+```
+
+
+# Question 3a. Accident Severity by Weather Contition
+
+Now we analyze the severity of accidents under different weather conditions by creating a stacked bar chart that shows the breakdown of accident severity by weather condition.
+
+```{r}
+# Plot accident severity by weather condition (Top 10)
+ggplot(accidents_by_weather_top, aes(x = reorder(Weather_Condition, Accident_Count), y = Accident_Count, fill = factor(Severity))) +
+  geom_bar(stat = "identity", position = "stack") +
+  coord_flip() +
+  labs(title = "Accident Severity by Weather Condition (Top 10)", 
+       x = "Weather Condition", 
+       y = "Number of Accidents", 
+       fill = "Severity") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),  # Reduce size of y-axis labels for readability
+        plot.title = element_text(size = 14),   # Adjust title size
+        axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better visibility
+```
+
+# Question 3b. Accident Severity by City
+
+We now explore how accident severity varies across the top 10 cities with the highest number of accidents.
+
+```{r echo=FALSE}
+# Summarize accidents by city and severity
+accidents_by_city <- accidents_data_clean %>%
+  group_by(City, Severity) %>%
+  summarise(Accident_Count = n()) %>%
+  arrange(desc(Accident_Count))
+
+# Limit to top 10 cities with the most accidents
+top_cities <- accidents_by_city %>%
+  group_by(City) %>%
+  summarise(Accident_Count = sum(Accident_Count)) %>%
+  arrange(desc(Accident_Count)) %>%
+  head(10)
+
+# Filter to only include top 10 cities
+accidents_by_city_top <- accidents_by_city %>%
+  filter(City %in% top_cities$City)
+
+# Reorder Severity factor to ensure correct ordering (from 1 to 4)
+accidents_by_city_top$Severity <- factor(accidents_by_city_top$Severity, levels = c(1, 2, 3, 4))
+
+# Plot accident severity by city (Top 10)
+ggplot(accidents_by_city_top, aes(x = reorder(City, Accident_Count), y = Accident_Count, fill = factor(Severity))) +
+  geom_bar(stat = "identity", position = "stack") +
+  coord_flip() +
+  labs(title = "Accident Severity by City (Top 10)", 
+       x = "City", 
+       y = "Number of Accidents", 
+       fill = "Severity") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),  # Reduce size of y-axis labels for readability
+        plot.title = element_text(size = 14),   # Adjust title size
+        axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better visibility
+```
+
+# Question 4.  Number of Accidents For Each Time of The Day
+```{r}
+# Plot the frequency of accidents by hour of the day (24-hour format)
+ggplot(accidents_data_time %>% filter(!is.na(Start_Hour)), aes(x = factor(Start_Hour))) +
+  geom_bar(fill = "orange", color = "black") +  # Bar chart with orange bars and black borders
+  labs(title = "Accidents by Hour of the Day", 
+       x = "Hour of the Day (24-hour format)", 
+       y = "Number of Accidents") +
+  scale_x_discrete(labels = function(x) paste0(str_pad(x, 2, pad = "0"))) +  # Ensure 2-digit formatting
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Increase x-axis label size and rotate
+    axis.text.y = element_text(size = 12),  # Increase y-axis label size
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),  # Increase title size
+    axis.title.x = element_text(size = 14),  # Increase x-axis title size
+    axis.title.y = element_text(size = 14),  # Increase y-axis title size
+    plot.margin = margin(20, 20, 20, 20)     # Add margin for better spacing
+  ) 
+```
+
+# Conclusion
+In this analysis, I found that cities like Los Angeles, Charlotte, and Miami are among the most accident-prone areas in the United States, likely due to their high population density, heavy traffic, and geographical factors. When examining weather conditions, fair weather emerged as the most common condition for accidents, followed by cloudy and mostly cloudy conditions. Interestingly, accident severity across all weather conditions consistently hovered around level 2 (moderate severity). However, when looking closely at the counts, it became evident that accidents tend to be evenly distributed across severity levels, so the larger number of accidents in fair weather conditions likely explains the higher frequency of severity 2 accidents. This highlights that while fair weather may not seem hazardous, its sheer volume of accidents results in a higher proportion of moderate-severity crashes.
+
+In terms of accident severity by city, Houston and Dallas stood out with notably higher occurrences of severity level 3 (serious accidents) compared to other cities. This could be indicative of factors such as road conditions, traffic patterns, or driving behaviors in these cities that contribute to more severe crashes. Furthermore, I found that most accidents tend to occur around hours 12:00 PM and 6:00 PM, possibly reflecting peak traffic times during the day, when drivers are more likely to be on the road during lunch breaks or in the evening after work.
+
+Overall, this analysis underscores the complexity of traffic accidents, where both environmental and geographical factors play significant roles. The findings suggest that cities with heavy traffic and more severe weather conditions need targeted safety initiatives, while moderate severity accidents in fair weather conditions still represent a significant portion of the overall accident data. Additionally, increased attention to traffic safety during peak hours (12 PM and 6 PM) may help address the higher frequency of accidents during those times. In the future, I hope to explore further measures to address these patterns and reduce accident severity across different regions and conditions.
+
+
